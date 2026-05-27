@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Multi-Level Assessment Portal</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="app-wrapper">
+        
+        <div id="login-container" class="card fade-in">
+            <div class="portal-header">
+                <i class="fa-brands fa-python portal-logo"></i>
+                <h2>Python Mastery Test</h2>
+                <p>Configure details and pick assessment tier rules to begin.</p>
+            </div>
+            <form id="login-form">
+                <div class="input-group">
+                    <label for="username"><i class="fa-solid fa-user"></i> Full Name</label>
+                    <input type="text" id="username" placeholder="exp.-Gagan deep" required>
+                </div>
+                <div class="input-group">
+                    <label for="empcode"><i class="fa-solid fa-id-card"></i> Employee Code / ID</label>
+                    <input type="text" id="empcode" placeholder="exp.-EMP12345" required>
+                </div>
+                <div class="input-group">
+                    <label for="department"><i class="fa-solid fa-building"></i> Core Department</label>
+                     <input type="text" id="department" placeholder="exp.-maintenance" required>
+                </div>
+                <div class="input-group">
+                    <label for="test-level"><i class="fa-solid fa-layer-group"></i> Select Assessment Level</label>
+                    <select id="test-level" required>
+                        <option value="All" selected>All Levels Combined (90 Questions)</option>
+                        <option value="Python (Beginner)">Python (Beginner) - 30 Qs</option>
+                        <option value="Python (Intermediate)">Python (Intermediate) - 30 Qs</option>
+                        <option value="Python (Advanced)">Python (Advanced) - 30 Qs</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">
+                    Start Assessment <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </form>
+        </div>
+
+        <div id="admin-login-container" class="card hidden fade-in">
+            <div class="portal-header">
+                <i class="fa-solid fa-user-shield portal-logo admin-color"></i>
+                <h2>Admin Console Login</h2>
+                <p>Restricted access for evaluating database records.</p>
+            </div>
+            <form id="admin-login-form">
+                <div class="input-group">
+                    <label for="admin-pass"><i class="fa-solid fa-lock"></i> Secure Password</label>
+                    <input type="password" id="admin-pass" placeholder="••••••••" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="back-to-login" class="btn btn-secondary">
+                        <i class="fa-solid fa-chevron-left"></i> Back
+                    </button>
+                    <button type="submit" class="btn btn-admin">
+                        Login Dashboard <i class="fa-solid fa-right-to-bracket"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div id="exam-container" class="exam-layout hidden fade-in">
+            <div class="exam-main card">
+                <div class="exam-header">
+                    <div><span id="question-category" class="badge-level">Python Level</span></div>
+                    <div class="timer-box"><i class="fa-solid fa-clock-rotate-left"></i> <span id="timer">30:00</span></div>
+                </div>
+                <div class="question-box"><h3 id="question-text">Loading secure query data blocks...</h3></div>
+                <div id="options-container" class="options-grid"></div>
+                <div class="exam-footer">
+                    <button id="prev-btn" class="btn btn-secondary" disabled><i class="fa-solid fa-chevron-left"></i> Previous</button>
+                    <button id="clear-btn" class="btn btn-danger-outline"><i class="fa-solid fa-eraser"></i> Clear Choice</button>
+                    <button id="next-btn" class="btn btn-secondary">Next <i class="fa-solid fa-chevron-right"></i></button>
+                </div>
+            </div>
+            <div class="exam-sidebar card">
+                <div class="candidate-meta-badge">
+                    <h4><i class="fa-solid fa-circle-user"></i> <span id="display-user">Candidate</span></h4>
+                    <p><b id="display-empcode">Code</b> | <span id="display-dept">Dept</span></p>
+                </div>
+                <hr class="divider">
+                <h5>Question Grid Navigation</h5>
+                <div id="palette-grid" class="palette-container"></div>
+                <hr class="divider">
+                <button id="final-submit-btn" class="btn btn-success btn-block"><i class="fa-solid fa-cloud-arrow-up"></i> Submit Test Portfolio</button>
+            </div>
+        </div>
+
+        <div id="result-container" class="card hidden fade-in">
+            <div class="portal-header">
+                <h2>Evaluation Scorecard</h2>
+                <p>Candidate: <b id="res-name">-</b> &nbsp;|&nbsp; ID: <b id="res-code">-</b> &nbsp;|&nbsp; Dept: <b id="res-dept">-</b></p>
+            </div>
+            <div class="score-cards-row">
+                <div class="metric-card"><span>Correct Items</span><h3 id="res-score">0 / 0</h3></div>
+                <div class="metric-card highlight"><span>Final Precision</span><h3><span id="res-percent">0</span>%</h3></div>
+            </div>
+            <div class="table-scroll-wrapper">
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Tier Group</th>
+                            <th>Problem Target</th>
+                            <th>Your Submission</th>
+                            <th>Verified Solution</th>
+                            <th>Status Verification</th>
+                        </tr>
+                    </thead>
+                    <tbody id="result-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="admin-dashboard-container" class="admin-dashboard-layout hidden fade-in">
+            
+            <div class="admin-top-bar-card card">
+                <div class="admin-title-area">
+                    <h2><i class="fa-solid fa-chart-line"></i> Admin Dashboard (Cloud Logs)</h2>
+                    <p>Real-time updates pulled from Live Firebase Node tree.</p>
+                </div>
+                <div class="admin-action-header-btns">
+                    <button id="admin-reset-db-btn" class="btn btn-danger"><i class="fa-solid fa-trash-can"></i> Reset Cloud Logs</button>
+                    <button id="admin-logout-btn" class="btn btn-secondary"><i class="fa-solid fa-right-from-bracket"></i> Logout Admin</button>
+                </div>
+            </div>
+
+            <div class="admin-metrics-grid">
+                <div class="admin-metric-box card">
+                    <span class="metric-label">Total Tests Taken</span>
+                    <h2 id="total-tests-count" class="metric-value">0</h2>
+                </div>
+                <div class="admin-metric-box card">
+                    <span class="metric-label">Highest Score</span>
+                    <h2 id="highest-score-value" class="metric-value">0 / 0</h2>
+                </div>
+                <div class="admin-metric-box card">
+                    <span class="metric-label">Average Percentage</span>
+                    <h2 id="avg-percentage-value" class="metric-value">0.00%</h2>
+                </div>
+            </div>
+
+            <div class="card table-card">
+                <div class="card-table-title">
+                    <h3>Submitted Logs Table</h3>
+                </div>
+                <div class="table-scroll-wrapper">
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Emp ID</th>
+                                <th>Candidate Name</th>
+                                <th>Department</th>
+                                <th>Score</th>
+                                <th>Percentage</th>
+                                <th style="text-align: center;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="admin-modal" class="modal-overlay hidden">
+        <div class="modal-card fade-in">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-file-invoice"></i> Candidate Detailed Sheet</h3>
+                <button id="close-modal-btn" class="close-x">&times;</button>
+            </div>
+            <div id="modal-meta-info" class="modal-meta"></div>
+            <div class="table-scroll-wrapper" style="max-height: 450px;">
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Question</th>
+                            <th>Selected Answer</th>
+                            <th>Correct Answer</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="modal-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="utility-bar">
+        <button id="admin-switch-btn" class="btn-text-only"><i class="fa-solid fa-lock"></i> Switch to Administrator Console Mode</button>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
