@@ -1,10 +1,18 @@
+// src/components/AdminPanel.jsx
+
 import React, { useMemo, useState } from "react";
+
 import { db } from "../firebase";
 
 import {
   collection,
   addDoc,
   serverTimestamp,
+  deleteDoc,
+  doc,
+  getDocs,
+  query,
+  where,
 } from "firebase/firestore";
 
 function AdminPanel({
@@ -16,21 +24,34 @@ function AdminPanel({
   setQuestions,
 }) {
 
-  const [activeTab, setActiveTab] = useState("users");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedUser, setSelectedUser] = useState(null);
+  // ================= STATES =================
 
-  const [loading, setLoading] = useState(false);
-  const [csvLoading, setCsvLoading] = useState(false);
+  const [activeTab, setActiveTab] =
+    useState("users");
 
-  // Dynamic Subjects
+  const [searchTerm, setSearchTerm] =
+    useState("");
+
+  const [selectedUser, setSelectedUser] =
+    useState(null);
+
+  const [selectedAttempt, setSelectedAttempt] =
+    useState(null);
+
+  const [loading, setLoading] =
+    useState(false);
+
+  const [csvLoading, setCsvLoading] =
+    useState(false);
+
+  const [uploadedCount, setUploadedCount] =
+    useState(0);
+
+  // ================= SUBJECTS =================
+
   const dynamicSubjects = useMemo(() => {
 
-    if (!questions || questions.length === 0) {
-      return ["HTML"];
-    }
-
-    const subjects = [
+    const subs = [
       ...new Set(
         questions
           .map((q) => q.subject)
@@ -38,320 +59,831 @@ function AdminPanel({
       ),
     ];
 
-    return subjects.length ? subjects : ["HTML"];
+    return subs;
 
   }, [questions]);
 
+  // ================= FORM =================
+
   const [tForm, setTForm] = useState({
     title: "",
-    subject: "HTML",
-    level: "Beginner",
-    duration: 30,
+    subject: "",
+    level: "",
+    duration: "",
   });
 
-  // Filter Users
-  const filteredUsers = users.filter((user) => {
+  // ================= FILTER USERS =================
 
-    if (user.role === "admin") return false;
+  const filteredUsers = users.filter(
+    (user) => {
 
-    const name = user.name || "";
-    const empId = user.empId || "";
+      if (user.role === "admin") {
+        return false;
+      }
 
-    return (
-      name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      empId.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  });
+      return (
+        (user.name || "")
+          .toLowerCase()
+          .includes(
+            searchTerm.toLowerCase()
+          ) ||
 
-  // Launch Test
-  const handleTestSubmit = async (e) => {
-
-    e.preventDefault();
-
-    if (!tForm.title) {
-      alert("Please enter test title");
-      return;
-    }
-
-    // Match Questions
-    const matchingQIds = questions
-      .filter(
-        (q) =>
-          q.subject === tForm.subject &&
-          q.level === tForm.level
-      )
-      .map((q) => q.id);
-
-    console.log("MATCHING QUESTIONS:", matchingQIds);
-
-    if (matchingQIds.length === 0) {
-
-      alert(
-        `No questions found for ${tForm.subject} (${tForm.level})`
+        (user.empId || "")
+          .toLowerCase()
+          .includes(
+            searchTerm.toLowerCase()
+          )
       );
+    }
+  );
 
+  // ================= CSV UPLOAD =================
+
+  const handleCSVUpload = async (
+    e
+  ) => {
+
+    const file = e.target.files[0];
+
+    if (!file) return;
+
+    if (
+      !tForm.subject ||
+      !tForm.level
+    ) {
+      alert(
+        "Please fill Subject & Level first"
+      );
       return;
     }
-
-    const newTest = {
-      title: tForm.title,
-      subject: tForm.subject,
-      level: tForm.level,
-      duration: Number(tForm.duration),
-      questionIds: matchingQIds,
-      createdAt: serverTimestamp(),
-      status: "live",
-    };
 
     try {
 
-      setLoading(true);
+      setCsvLoading(true);
 
-      const docRef = await addDoc(
-        collection(db, "tests"),
-        newTest
-      );
+      const text =
+        await file.text();
 
-      setTests([
-        ...tests,
-        {
+      const rows = text
+        .replace(/\r/g, "")
+        .split("\n")
+        .filter(
+          (r) => r.trim() !== ""
+        );
+
+      const uploaded = [];
+
+      for (
+        let i = 1;
+        i < rows.length;
+        i++
+      ) {
+
+        const cols =
+          rows[i].split(",");
+
+        if (cols.length < 6) {
+          continue;
+        }
+
+        const questionObj = {
+          question:
+            cols[0]?.trim(),
+
+          options: [
+            cols[1]?.trim(),
+            cols[2]?.trim(),
+            cols[3]?.trim(),
+            cols[4]?.trim(),
+          ],
+
+          answer:
+            cols[5]?.trim(),
+
+          subject:
+            tForm.subject,
+
+          level:
+            tForm.level,
+
+          createdAt:
+            serverTimestamp(),
+        };
+
+        const docRef =
+          await addDoc(
+            collection(
+              db,
+              "questions"
+            ),
+            questionObj
+          );
+
+        uploaded.push({
           id: docRef.id,
-          ...newTest,
-        },
-      ]);
+          ...questionObj,
+        });
+      }
 
-      alert("Test launched successfully!");
+      if (uploaded.length > 0) {
 
-      setTForm({
-        title: "",
-        subject: dynamicSubjects[0] || "HTML",
-        level: "Beginner",
-        duration: 30,
-      });
+        setQuestions((prev) => [
+          ...prev,
+          ...uploaded,
+        ]);
+
+        setUploadedCount(
+          uploaded.length
+        );
+
+        alert(
+          `${uploaded.length} Questions Uploaded`
+        );
+
+      } else {
+
+        alert(
+          "No valid questions found"
+        );
+      }
 
     } catch (err) {
 
-      console.error("TEST ERROR:", err);
+      console.log(err);
 
-      alert("Failed to launch test");
+      alert(
+        "CSV Upload Failed"
+      );
 
     } finally {
 
-      setLoading(false);
+      setCsvLoading(false);
     }
   };
 
-  // CSV Upload function
-const handleCSVUpload = async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+  // ================= CREATE TEST =================
 
-  try {
-    setCsvLoading(true);
-    
-    // Read the file as text
-    const text = await file.text();
-    
-    // 1. Remove carriage returns (\r) and split into rows by new line
-    // Filter out any empty rows
-    const rows = text.replace(/\r/g, "").split("\n").filter(row => row.trim() !== "");
+  const handleTestSubmit =
+    async (e) => {
 
-    const uploadedQuestions = [];
+      e.preventDefault();
 
-    // 2. Start from index 1 to skip the header row
-    for (let i = 1; i < rows.length; i++) {
-      // Split each row by comma to get individual columns
-      const cols = rows[i].split(",");
-      
-      // 3. Validation: ensure the row has at least 6 parts (Question + 4 Options + Answer)
-      if (cols.length < 6) {
-        console.warn(`Skipping invalid row ${i}:`, cols);
-        continue;
+      if (
+        !tForm.title ||
+        !tForm.subject ||
+        !tForm.level ||
+        !tForm.duration
+      ) {
+
+        alert(
+          "Please fill all fields"
+        );
+
+        return;
       }
 
-      // Create the question object
-      const questionObj = {
-        question: cols[0]?.trim(),
-        options: [
-          cols[1]?.trim(), 
-          cols[2]?.trim(), 
-          cols[3]?.trim(), 
-          cols[4]?.trim()
-        ],
-        answer: cols[5]?.trim(),
-        subject: tForm.subject,
-        level: tForm.level,
-        createdAt: serverTimestamp(),
-      };
+      if (uploadedCount === 0) {
 
-      // Add the document to Firestore
-      const docRef = await addDoc(collection(db, "questions"), questionObj);
-      uploadedQuestions.push({ id: docRef.id, ...questionObj });
-    }
+        alert(
+          "Upload Questions CSV First"
+        );
 
-    // 4. Update the state with new questions if setQuestions function exists
-    if (uploadedQuestions.length > 0) {
-      setQuestions((prev) => [...prev, ...uploadedQuestions]);
-      alert(`${uploadedQuestions.length} Questions Uploaded Successfully!`);
-    } else {
-      alert("No valid questions found to upload. Please check your CSV format.");
-    }
-  } catch (err) {
-    console.error("CSV Upload Error:", err);
-    alert("CSV Upload Failed: " + err.message);
-  } finally {
-    setCsvLoading(false);
-  }
-};
+        return;
+      }
+
+      // CHECK DUPLICATE TEST
+
+      const duplicate = tests.find(
+        (t) =>
+          t.title
+            .trim()
+            .toLowerCase() ===
+            tForm.title
+              .trim()
+              .toLowerCase() &&
+
+          t.subject ===
+            tForm.subject &&
+
+          t.level ===
+            tForm.level
+      );
+
+      if (duplicate) {
+
+        alert(
+          "Same Test Already Exists"
+        );
+
+        return;
+      }
+
+      const matchingQIds =
+        questions
+          .filter(
+            (q) =>
+              q.subject ===
+                tForm.subject &&
+              q.level ===
+                tForm.level
+          )
+          .map((q) => q.id);
+
+      if (
+        matchingQIds.length === 0
+      ) {
+
+        alert(
+          "No questions available"
+        );
+
+        return;
+      }
+
+      try {
+
+        setLoading(true);
+
+        const newTest = {
+          title:
+            tForm.title,
+          subject:
+            tForm.subject,
+          level:
+            tForm.level,
+          duration:
+            Number(
+              tForm.duration
+            ),
+          questionIds:
+            matchingQIds,
+          status: "live",
+          createdAt:
+            serverTimestamp(),
+        };
+
+        const docRef =
+          await addDoc(
+            collection(
+              db,
+              "tests"
+            ),
+            newTest
+          );
+
+        setTests([
+          ...tests,
+          {
+            id: docRef.id,
+            ...newTest,
+          },
+        ]);
+
+        alert(
+          "Test Launched Successfully"
+        );
+
+        setTForm({
+          title: "",
+          subject: "",
+          level: "",
+          duration: "",
+        });
+
+        setUploadedCount(0);
+
+      } catch (err) {
+
+        console.log(err);
+
+        alert(
+          "Failed To Launch Test"
+        );
+
+      } finally {
+
+        setLoading(false);
+      }
+    };
+
+  // ================= DELETE TEST =================
+
+  const handleDeleteTest =
+    async (id) => {
+
+      const confirmDelete =
+        window.confirm(
+          "Delete this test?"
+        );
+
+      if (!confirmDelete) return;
+
+      try {
+
+        await deleteDoc(
+          doc(
+            db,
+            "tests",
+            id
+          )
+        );
+
+        setTests(
+          tests.filter(
+            (t) => t.id !== id
+          )
+        );
+
+        alert(
+          "Test Deleted"
+        );
+
+      } catch (err) {
+
+        console.log(err);
+
+        alert(
+          "Delete Failed"
+        );
+      }
+    };
+
+  // ================= DELETE USER =================
+
+  const handleDeleteUser =
+    async (empId) => {
+
+      const confirmDelete =
+        window.confirm(
+          "Delete User?"
+        );
+
+      if (!confirmDelete) return;
+
+      try {
+
+        await deleteDoc(
+          doc(
+            db,
+            "users",
+            empId
+          )
+        );
+
+        alert(
+          "User Deleted"
+        );
+
+        window.location.reload();
+
+      } catch (err) {
+
+        console.log(err);
+
+        alert(
+          "Delete Failed"
+        );
+      }
+    };
+
+  // ================= UI =================
 
   return (
 
-    <div className="max-w-7xl mx-auto py-8 px-4 space-y-6">
+    <div className="space-y-6">
 
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-center bg-slate-800 text-white p-5 rounded-2xl shadow-lg gap-4">
+      {/* HEADER */}
+
+      <div className="bg-slate-900 text-white p-6 rounded-3xl flex flex-col lg:flex-row justify-between gap-5">
 
         <div>
-          <h2 className="text-2xl font-extrabold tracking-wide">
-            ⚙️ Admin Control Panel
+
+          <h2 className="text-3xl font-black">
+            Admin Panel
           </h2>
 
-          <p className="text-sm text-slate-300 mt-1">
-            Manage Tests, Candidates & Analytics
+          <p className="text-slate-300 mt-2 text-sm">
+            Manage Users, Tests & Analytics
           </p>
+
         </div>
 
         <button
-          onClick={() => setCurrentScreen("dashboard")}
-          className="bg-blue-600 hover:bg-blue-700 px-5 py-2 rounded-lg font-semibold transition"
+          onClick={() =>
+            setCurrentScreen(
+              "dashboard"
+            )
+          }
+          className="bg-blue-600 hover:bg-blue-700 px-5 py-3 rounded-2xl font-black"
         >
-          View as Candidate
+          View Dashboard
         </button>
 
       </div>
 
-      {/* Tabs */}
-      <div className="bg-white p-2 rounded-xl shadow flex gap-3 border">
+      {/* TABS */}
 
-        <button
-          onClick={() => {
-            setActiveTab("users");
-            setSelectedUser(null);
-          }}
-          className={`flex-1 py-3 rounded-lg text-sm font-bold transition ${
-            activeTab === "users"
-              ? "bg-slate-800 text-white"
-              : "hover:bg-gray-100 text-gray-600"
-          }`}
-        >
-          👤 User Analytics
-        </button>
+      <div className="bg-white rounded-2xl border p-2 flex flex-wrap gap-2">
 
-        <button
-          onClick={() => setActiveTab("launch-test")}
-          className={`flex-1 py-3 rounded-lg text-sm font-bold transition ${
-            activeTab === "launch-test"
-              ? "bg-slate-800 text-white"
-              : "hover:bg-gray-100 text-gray-600"
-          }`}
-        >
-          🚀 Launch Test
-        </button>
+        {[
+          "users",
+          "launch-test",
+          "live-tests",
+        ].map((tab) => (
+
+          <button
+            key={tab}
+            onClick={() =>
+              setActiveTab(tab)
+            }
+            className={`px-5 py-3 rounded-xl font-bold transition ${
+              activeTab === tab
+                ? "bg-slate-900 text-white"
+                : "hover:bg-slate-100"
+            }`}
+          >
+            {tab}
+          </button>
+
+        ))}
 
       </div>
 
-      {/* USER TAB */}
+      {/* ================= USERS ================= */}
+
       {activeTab === "users" && (
 
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid lg:grid-cols-3 gap-6">
 
-          <div className="bg-white rounded-xl shadow border p-4">
+          {/* LEFT */}
 
-            <h3 className="font-bold text-slate-700 mb-4">
-              Employee Search
-            </h3>
+          <div className="bg-white rounded-3xl border p-5">
 
             <input
               type="text"
-              placeholder="Search employee"
+              placeholder="Search User"
               value={searchTerm}
               onChange={(e) =>
-                setSearchTerm(e.target.value)
+                setSearchTerm(
+                  e.target.value
+                )
               }
-              className="w-full border rounded-lg px-3 py-2 text-sm"
+              className="w-full border rounded-2xl px-4 py-3 font-semibold"
             />
 
-            <div className="mt-4 space-y-2 max-h-[500px] overflow-y-auto">
+            <div className="mt-5 space-y-3 max-h-[700px] overflow-y-auto">
 
-              {filteredUsers.length === 0 && (
-                <p className="text-center text-gray-400 text-sm py-5">
-                  No employee found
-                </p>
+              {filteredUsers.map(
+                (user) => (
+
+                  <button
+                    key={user.empId}
+                    onClick={() => {
+                      setSelectedUser(
+                        user
+                      );
+
+                      setSelectedAttempt(
+                        null
+                      );
+                    }}
+                    className={`w-full border rounded-2xl p-4 text-left transition ${
+                      selectedUser?.empId ===
+                      user.empId
+                        ? "border-blue-600 bg-blue-50"
+                        : "hover:bg-slate-50"
+                    }`}
+                  >
+
+                    <div className="flex justify-between items-center">
+
+                      <div>
+
+                        <h3 className="font-black">
+                          {user.name}
+                        </h3>
+
+                        <p className="text-xs text-slate-500 mt-1">
+                          {
+                            user.empId
+                          }{" "}
+                          |{" "}
+                          {
+                            user.dept
+                          }
+                        </p>
+
+                      </div>
+
+                      <div className="bg-slate-100 px-3 py-1 rounded-full text-xs font-black">
+                        {user
+                          ?.performance
+                          ?.overall ||
+                          0}
+                        %
+                      </div>
+
+                    </div>
+
+                  </button>
+                )
               )}
-
-              {filteredUsers.map((user) => (
-
-                <button
-                  key={user.empId}
-                  onClick={() => setSelectedUser(user)}
-                  className={`w-full text-left p-4 rounded-xl border transition ${
-                    selectedUser?.empId === user.empId
-                      ? "border-blue-500 bg-blue-50"
-                      : "hover:bg-gray-50"
-                  }`}
-                >
-
-                  <div className="flex justify-between items-center">
-
-                    <div>
-
-                      <h4 className="font-bold text-sm">
-                        {user.name}
-                      </h4>
-
-                      <p className="text-xs text-gray-500 mt-1">
-                        {user.empId} | {user.dept}
-                      </p>
-
-                    </div>
-
-                    <div className="bg-slate-100 px-3 py-1 rounded-full text-xs font-bold">
-                      {user.performance?.overall || 0}%
-                    </div>
-
-                  </div>
-
-                </button>
-              ))}
 
             </div>
 
           </div>
 
-          <div className="md:col-span-2 bg-white rounded-xl shadow border p-6 min-h-[500px]">
+          {/* RIGHT */}
 
-            {selectedUser ? (
+          <div className="lg:col-span-2 bg-white rounded-3xl border p-6">
 
-              <div>
+            {!selectedUser ? (
 
-                <div className="border-b pb-4 mb-6">
-
-                  <h3 className="text-2xl font-bold text-slate-800">
-                    {selectedUser.name}
-                  </h3>
-
-                  <p className="text-gray-500 text-sm mt-1">
-                    {selectedUser.empId} | {selectedUser.dept}
-                  </p>
-
-                </div>
-
+              <div className="h-full flex items-center justify-center text-slate-400 font-bold">
+                Select User
               </div>
 
             ) : (
 
-              <div className="flex items-center justify-center h-full text-gray-400 text-lg font-medium">
-                Select Employee to View Analytics
+              <div>
+
+                {/* TOP */}
+
+                <div className="flex flex-col lg:flex-row justify-between gap-5 border-b pb-5">
+
+                  <div>
+
+                    <h2 className="text-3xl font-black">
+                      {
+                        selectedUser.name
+                      }
+                    </h2>
+
+                    <p className="text-slate-500 mt-2">
+                      {
+                        selectedUser.empId
+                      }{" "}
+                      |{" "}
+                      {
+                        selectedUser.dept
+                      }
+                    </p>
+
+                  </div>
+
+                  <button
+                    onClick={() =>
+                      handleDeleteUser(
+                        selectedUser.empId
+                      )
+                    }
+                    className="bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-2xl font-black"
+                  >
+                    Delete User
+                  </button>
+
+                </div>
+
+                {/* PERFORMANCE */}
+
+                <div className="grid md:grid-cols-4 gap-4 mt-6">
+
+                  <div className="bg-slate-100 rounded-2xl p-5">
+                    <p className="text-xs font-black text-slate-500 uppercase">
+                      Overall
+                    </p>
+
+                    <h3 className="text-3xl font-black mt-2">
+                      {selectedUser
+                        ?.performance
+                        ?.overall ||
+                        0}
+                      %
+                    </h3>
+                  </div>
+
+                  <div className="bg-blue-100 rounded-2xl p-5">
+                    <p className="text-xs font-black uppercase">
+                      Beginner
+                    </p>
+
+                    <h3 className="text-3xl font-black mt-2">
+                      {selectedUser
+                        ?.performance
+                        ?.Beginner ||
+                        0}
+                      %
+                    </h3>
+                  </div>
+
+                  <div className="bg-orange-100 rounded-2xl p-5">
+                    <p className="text-xs font-black uppercase">
+                      Mid
+                    </p>
+
+                    <h3 className="text-3xl font-black mt-2">
+                      {selectedUser
+                        ?.performance
+                        ?.Mid ||
+                        0}
+                      %
+                    </h3>
+                  </div>
+
+                  <div className="bg-emerald-100 rounded-2xl p-5">
+                    <p className="text-xs font-black uppercase">
+                      Advanced
+                    </p>
+
+                    <h3 className="text-3xl font-black mt-2">
+                      {selectedUser
+                        ?.performance
+                        ?.Advanced ||
+                        0}
+                      %
+                    </h3>
+                  </div>
+
+                </div>
+
+                {/* ATTEMPTS */}
+
+                <div className="mt-8">
+
+                  <h3 className="text-xl font-black mb-5">
+                    Test Attempts
+                  </h3>
+
+                  <div className="space-y-4">
+
+                    {selectedUser
+                      ?.attempts
+                      ?.length > 0 ? (
+
+                      selectedUser.attempts
+                        .slice()
+                        .reverse()
+                        .map(
+                          (
+                            attempt,
+                            index
+                          ) => (
+
+                            <div
+                              key={
+                                index
+                              }
+                              className="border rounded-2xl p-5"
+                            >
+
+                              <div className="flex flex-col lg:flex-row justify-between gap-5">
+
+                                <div>
+
+                                  <h4 className="font-black text-lg">
+                                    {
+                                      attempt.testTitle
+                                    }
+                                  </h4>
+
+                                  <p className="text-sm text-slate-500 mt-1">
+                                    {
+                                      attempt.subject
+                                    }{" "}
+                                    |{" "}
+                                    {
+                                      attempt.level
+                                    }
+                                  </p>
+
+                                  <p className="text-xs text-slate-400 mt-2">
+                                    {
+                                      attempt.submittedAt
+                                    }
+                                  </p>
+
+                                </div>
+
+                                <div className="text-right">
+
+                                  <div className="text-4xl font-black text-blue-600">
+                                    {
+                                      attempt.score
+                                    }
+                                    %
+                                  </div>
+
+                                  <p className="text-xs text-slate-500 mt-1">
+                                    {
+                                      attempt.correctAnswers
+                                    }
+                                    /
+                                    {
+                                      attempt.totalQuestions
+                                    }{" "}
+                                    Correct
+                                  </p>
+
+                                </div>
+
+                              </div>
+
+                              {/* ANSWER SHEET */}
+
+                              {attempt.answerSheet &&
+                                (
+                                  <div className="mt-6 space-y-4">
+
+                                    <h4 className="font-black text-slate-800">
+                                      Submitted Answers
+                                    </h4>
+
+                                    {attempt.answerSheet.map(
+                                      (
+                                        ans,
+                                        idx
+                                      ) => (
+
+                                        <div
+                                          key={
+                                            idx
+                                          }
+                                          className={`border rounded-2xl p-5 ${
+                                            ans.isCorrect
+                                              ? "border-emerald-300 bg-emerald-50"
+                                              : "border-red-300 bg-red-50"
+                                          }`}
+                                        >
+
+                                          <h5 className="font-black text-slate-900">
+                                            Q
+                                            {idx +
+                                              1}
+                                            .{" "}
+                                            {
+                                              ans.question
+                                            }
+                                          </h5>
+
+                                          <div className="mt-4 space-y-2 text-sm">
+
+                                            <p>
+                                              <span className="font-black">
+                                                User
+                                                Answer:
+                                              </span>{" "}
+                                              {
+                                                ans.userAnswer
+                                              }
+                                            </p>
+
+                                            <p>
+                                              <span className="font-black">
+                                                Correct
+                                                Answer:
+                                              </span>{" "}
+                                              {
+                                                ans.correctAnswer
+                                              }
+                                            </p>
+
+                                            <p
+                                              className={`font-black ${
+                                                ans.isCorrect
+                                                  ? "text-emerald-700"
+                                                  : "text-red-700"
+                                              }`}
+                                            >
+                                              {ans.isCorrect
+                                                ? "Correct"
+                                                : "Wrong"}
+                                            </p>
+
+                                          </div>
+
+                                        </div>
+                                      )
+                                    )}
+
+                                  </div>
+                                )}
+
+                            </div>
+                          )
+                        )
+
+                    ) : (
+
+                      <p className="text-slate-400">
+                        No Attempts
+                      </p>
+
+                    )}
+
+                  </div>
+
+                </div>
+
               </div>
 
             )}
@@ -361,70 +893,87 @@ const handleCSVUpload = async (e) => {
         </div>
       )}
 
-      {/* LAUNCH TEST TAB */}
-      {activeTab === "launch-test" && (
+      {/* ================= LAUNCH TEST ================= */}
 
-        <div className="max-w-3xl mx-auto bg-white rounded-2xl border shadow-lg p-8">
+      {activeTab ===
+        "launch-test" && (
 
-          <div className="flex justify-between items-center border-b pb-4 mb-6">
+        <div className="bg-white rounded-3xl border p-8 max-w-4xl mx-auto">
 
-            <h3 className="text-xl font-bold text-slate-800">
-              🚀 Launch Live Examination
-            </h3>
+          <h2 className="text-3xl font-black">
+            Launch Test
+          </h2>
 
-          </div>
+          {/* CSV */}
 
-          {/* CSV Upload */}
-          <div className="mb-8 bg-slate-50 border rounded-xl p-5">
+          <div className="mt-8 bg-slate-50 border rounded-3xl p-6">
 
-            <h4 className="font-bold text-slate-700 mb-3">
+            <h3 className="font-black text-lg">
               Upload Questions CSV
-            </h4>
+            </h3>
 
             <input
               type="file"
               accept=".csv"
-              onChange={handleCSVUpload}
-              className="w-full border rounded-lg px-3 py-2 bg-white"
+              onChange={
+                handleCSVUpload
+              }
+              className="mt-5 w-full border rounded-2xl px-4 py-4 bg-white"
             />
 
-            <p className="text-xs text-gray-500 mt-3 leading-6">
+            <p className="text-sm text-slate-500 mt-4 leading-7">
               CSV Format:
               <br />
               question,option1,option2,option3,option4,answer
             </p>
 
             {csvLoading && (
-              <p className="text-blue-600 text-sm mt-3 font-semibold">
-                Uploading Questions...
+              <p className="mt-4 text-blue-600 font-black">
+                Uploading...
+              </p>
+            )}
+
+            {uploadedCount >
+              0 && (
+              <p className="mt-4 text-emerald-600 font-black">
+                {
+                  uploadedCount
+                }{" "}
+                Questions Uploaded
               </p>
             )}
 
           </div>
 
-          {/* Launch Form */}
+          {/* FORM */}
+
           <form
-            onSubmit={handleTestSubmit}
-            className="space-y-5"
+            onSubmit={
+              handleTestSubmit
+            }
+            className="mt-8 space-y-6"
           >
 
             <div>
 
-              <label className="block text-sm font-bold text-gray-700 mb-2">
-                Assessment Title
+              <label className="font-black text-sm block mb-2">
+                Test Title
               </label>
 
               <input
                 type="text"
-                placeholder="JavaScript Mid-Level Test"
-                value={tForm.title}
+                value={
+                  tForm.title
+                }
                 onChange={(e) =>
                   setTForm({
                     ...tForm,
-                    title: e.target.value,
+                    title:
+                      e.target.value,
                   })
                 }
-                className="w-full border rounded-xl px-4 py-3"
+                className="w-full border rounded-2xl px-5 py-4 font-bold"
+                placeholder="Enter Test Name"
               />
 
             </div>
@@ -433,52 +982,51 @@ const handleCSVUpload = async (e) => {
 
               <div>
 
-                <label className="block text-sm font-bold text-gray-700 mb-2">
-                  Subject Filter
+                <label className="font-black text-sm block mb-2">
+                  Subject
                 </label>
 
-                <select
-                  value={tForm.subject}
+                <input
+                  type="text"
+                  value={
+                    tForm.subject
+                  }
                   onChange={(e) =>
                     setTForm({
                       ...tForm,
-                      subject: e.target.value,
+                      subject:
+                        e.target.value.toUpperCase(),
                     })
                   }
-                  className="w-full border rounded-xl px-4 py-3 bg-white"
-                >
-
-                  {dynamicSubjects.map((subject, index) => (
-
-                    <option
-                      key={index}
-                      value={subject}
-                    >
-                      {subject}
-                    </option>
-
-                  ))}
-
-                </select>
+                  placeholder="ENTER SUBJECT"
+                  className="w-full border rounded-2xl px-5 py-4 font-black uppercase"
+                />
 
               </div>
 
               <div>
 
-                <label className="block text-sm font-bold text-gray-700 mb-2">
-                  Assessment Level
+                <label className="font-black text-sm block mb-2">
+                  Level
                 </label>
 
                 <select
-                  value={tForm.level}
+                  value={
+                    tForm.level
+                  }
                   onChange={(e) =>
                     setTForm({
                       ...tForm,
-                      level: e.target.value,
+                      level:
+                        e.target.value,
                     })
                   }
-                  className="w-full border rounded-xl px-4 py-3 bg-white"
+                  className="w-full border rounded-2xl px-5 py-4 bg-white font-bold"
                 >
+
+                  <option value="">
+                    Select Level
+                  </option>
 
                   <option value="Beginner">
                     Beginner
@@ -500,20 +1048,25 @@ const handleCSVUpload = async (e) => {
 
             <div>
 
-              <label className="block text-sm font-bold text-gray-700 mb-2">
-                Timer Duration (Minutes)
+              <label className="font-black text-sm block mb-2">
+                Duration
+                (Minutes)
               </label>
 
               <input
                 type="number"
-                value={tForm.duration}
+                value={
+                  tForm.duration
+                }
                 onChange={(e) =>
                   setTForm({
                     ...tForm,
-                    duration: e.target.value,
+                    duration:
+                      e.target.value,
                   })
                 }
-                className="w-full border rounded-xl px-4 py-3"
+                placeholder="Enter Minutes"
+                className="w-full border rounded-2xl px-5 py-4 font-bold"
               />
 
             </div>
@@ -521,16 +1074,98 @@ const handleCSVUpload = async (e) => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-4 rounded-xl shadow-lg transition uppercase"
+              className="w-full bg-red-600 hover:bg-red-700 text-white py-5 rounded-2xl font-black uppercase"
             >
 
               {loading
-                ? "Launching Test..."
-                : "Deploy & Launch Test Live"}
+                ? "Launching..."
+                : "Launch Test"}
 
             </button>
 
           </form>
+
+        </div>
+      )}
+
+      {/* ================= LIVE TESTS ================= */}
+
+      {activeTab ===
+        "live-tests" && (
+
+        <div className="bg-white rounded-3xl border p-6">
+
+          <h2 className="text-3xl font-black mb-8">
+            Live Tests
+          </h2>
+
+          <div className="space-y-5">
+
+            {tests.length ===
+            0 ? (
+
+              <p className="text-slate-400">
+                No Tests Available
+              </p>
+
+            ) : (
+
+              tests.map((test) => (
+
+                <div
+                  key={test.id}
+                  className="border rounded-3xl p-6 flex flex-col lg:flex-row justify-between gap-5"
+                >
+
+                  <div>
+
+                    <h3 className="text-2xl font-black">
+                      {
+                        test.title
+                      }
+                    </h3>
+
+                    <div className="flex flex-wrap gap-3 mt-4">
+
+                      <span className="bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-xs font-black uppercase">
+                        {
+                          test.subject
+                        }
+                      </span>
+
+                      <span className="bg-orange-100 text-orange-700 px-4 py-2 rounded-full text-xs font-black uppercase">
+                        {
+                          test.level
+                        }
+                      </span>
+
+                      <span className="bg-slate-100 px-4 py-2 rounded-full text-xs font-black uppercase">
+                        {
+                          test.duration
+                        }{" "}
+                        Minutes
+                      </span>
+
+                    </div>
+
+                  </div>
+
+                  <button
+                    onClick={() =>
+                      handleDeleteTest(
+                        test.id
+                      )
+                    }
+                    className="bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-2xl font-black h-fit"
+                  >
+                    Delete
+                  </button>
+
+                </div>
+              ))
+            )}
+
+          </div>
 
         </div>
       )}
