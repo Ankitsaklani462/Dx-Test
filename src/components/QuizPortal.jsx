@@ -81,6 +81,7 @@ function QuizPortal({
         "performance.overall": score,
       });
 
+      console.log("Test submitted!");
     } catch (error) {
       console.error("Error:", error);
     }
@@ -89,8 +90,6 @@ function QuizPortal({
   // ================= TIMER =================
 
   useEffect(() => {
-    document.body.style.overflow = "hidden";
-
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
@@ -111,11 +110,8 @@ function QuizPortal({
       });
     }, 1000);
 
-    return () => {
-      clearInterval(timer);
-      document.body.style.overflow = "auto";
-    };
-  }, [userAnswers]);
+    return () => clearInterval(timer);
+  }, [userAnswers, setCurrentScreen]);
 
   // ================= FORMAT TIME =================
 
@@ -161,15 +157,15 @@ function QuizPortal({
   // ================= UI =================
 
   return (
-    <div className="fixed inset-0 bg-gray-100 flex flex-col overflow-hidden">
+    <div className="min-h-screen bg-gray-100 w-full overflow-x-hidden">
 
-      {/* ================= HEADER ================= */}
+      {/* HEADER */}
 
-      <div className="flex-shrink-0 shadow-md z-50">
+      <div className="sticky top-0 z-50 shadow-md">
 
-        <header className="bg-[#1a2333] text-white px-3 sm:px-5 py-3 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        <header className="bg-[#1a2333] text-white px-3 sm:px-5 py-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
 
-          <div className="font-bold text-[11px] sm:text-sm break-words">
+          <div className="font-bold text-xs sm:text-sm break-words">
 
             TOYOTA BOSHOKU | Candidate:
             {" "}
@@ -179,7 +175,7 @@ function QuizPortal({
 
           <button
             onClick={handleBack}
-            className="bg-red-700 hover:bg-red-800 px-4 py-2 rounded text-[11px] sm:text-xs font-bold w-full lg:w-auto"
+            className="bg-red-700 hover:bg-red-800 px-4 py-2 rounded text-xs font-bold w-full md:w-auto"
           >
             ← BACK TO DASHBOARD
           </button>
@@ -195,18 +191,17 @@ function QuizPortal({
 
           </div>
         )}
-
       </div>
 
-      {/* ================= MAIN ================= */}
+      {/* MAIN */}
 
-      <main className="flex-1 overflow-hidden p-2 sm:p-4">
+      <main className="p-2 sm:p-4 lg:p-6">
 
         {showResult ? (
 
           // ================= RESULT =================
 
-          <div className="bg-white rounded-2xl border shadow-sm h-full overflow-y-auto p-4 sm:p-6 lg:p-8">
+          <div className="bg-white rounded-2xl border shadow-sm p-4 sm:p-6 lg:p-8">
 
             <h2 className="text-2xl sm:text-3xl font-black text-green-600 text-center">
 
@@ -317,11 +312,11 @@ function QuizPortal({
 
           // ================= QUIZ =================
 
-          <div className="h-full flex flex-col xl:flex-row gap-4 overflow-hidden">
+          <div className="flex flex-col xl:grid xl:grid-cols-[1fr_220px] gap-4 items-start">
 
-            {/* ================= QUESTION SECTION ================= */}
+            {/* QUESTION SECTION */}
 
-            <section className="flex-1 bg-white rounded-2xl shadow-sm border p-4 sm:p-6 flex flex-col overflow-hidden order-2 xl:order-1">
+            <section className="w-full bg-white rounded-2xl shadow-sm border p-4 sm:p-6 flex flex-col order-2 xl:order-1">
 
               <div className="text-orange-600 font-black uppercase text-xs tracking-wider mb-4">
 
@@ -329,47 +324,43 @@ function QuizPortal({
 
               </div>
 
-              <div className="overflow-y-auto flex-1 pr-1">
+              <h2 className="text-base sm:text-lg lg:text-xl font-bold mb-6 break-words leading-relaxed">
 
-                <h2 className="text-base sm:text-lg lg:text-xl font-bold mb-6 break-words leading-relaxed">
+                Q{currentIdx + 1}.
+                {" "}
+                {currentQuestion?.question}
 
-                  Q{currentIdx + 1}.
-                  {" "}
-                  {currentQuestion?.question}
+              </h2>
 
-                </h2>
+              {/* OPTIONS */}
 
-                {/* OPTIONS */}
+              <div className="space-y-3">
 
-                <div className="space-y-3">
+                {currentQuestion?.options.map(
+                  (opt, i) => (
 
-                  {currentQuestion?.options.map(
-                    (opt, i) => (
+                    <button
+                      key={i}
+                      onClick={() =>
+                        setUserAnswers({
+                          ...userAnswers,
+                          [currentQuestion.id]: opt,
+                        })
+                      }
+                      className={`w-full text-left p-3 sm:p-4 rounded-xl border-2 transition text-sm sm:text-base break-words ${
+                        userAnswers[
+                          currentQuestion.id
+                        ] === opt
+                          ? "bg-blue-50 border-blue-600 text-blue-700 font-bold"
+                          : "border-gray-200 hover:border-gray-400 bg-white"
+                      }`}
+                    >
 
-                      <button
-                        key={i}
-                        onClick={() =>
-                          setUserAnswers({
-                            ...userAnswers,
-                            [currentQuestion.id]: opt,
-                          })
-                        }
-                        className={`w-full text-left p-3 sm:p-4 rounded-xl border-2 transition text-sm sm:text-base break-words ${
-                          userAnswers[
-                            currentQuestion.id
-                          ] === opt
-                            ? "bg-blue-50 border-blue-600 text-blue-700 font-bold"
-                            : "border-gray-200 hover:border-gray-400 bg-white"
-                        }`}
-                      >
+                      {opt}
 
-                        {opt}
-
-                      </button>
-                    )
-                  )}
-
-                </div>
+                    </button>
+                  )
+                )}
 
               </div>
 
@@ -425,11 +416,11 @@ function QuizPortal({
 
             </section>
 
-            {/* ================= SIDEBAR ================= */}
+            {/* SIDEBAR */}
 
-            <aside className="xl:w-[320px] bg-white rounded-2xl shadow-sm border p-4 sm:p-5 flex flex-col order-1 xl:order-2 flex-shrink-0">
+            <aside className="bg-white rounded-2xl shadow-sm border p-3 sm:p-4 flex flex-col order-1 xl:order-2 xl:w-[220px] 2xl:w-[230px] h-fit w-full">
 
-              <h3 className="text-gray-500 font-bold uppercase text-sm mb-4">
+              <h3 className="text-gray-500 font-bold uppercase text-xs sm:text-sm mb-3">
 
                 Question Tracker
 
@@ -437,28 +428,33 @@ function QuizPortal({
 
               {/* QUESTION BUTTONS */}
 
-              <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 xl:grid-cols-4 gap-2 overflow-y-auto max-h-[250px] xl:max-h-none pr-1">
+              <div className="max-h-[420px] overflow-y-auto pr-1">
 
-                {testQuestions.map((q, i) => (
+                <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 xl:grid-cols-4 gap-2">
 
-                  <button
-                    key={i}
-                    onClick={() =>
-                      setCurrentIdx(i)
-                    }
-                    className={`h-11 rounded-lg border-2 text-sm font-bold transition ${
-                      currentIdx === i
-                        ? "bg-blue-600 border-blue-600 text-white"
-                        : userAnswers[q.id]
-                        ? "bg-green-500 border-green-500 text-white"
-                        : "bg-gray-100 hover:bg-gray-200 border-gray-300"
-                    }`}
-                  >
+                  {testQuestions.map((q, i) => (
 
-                    {i + 1}
+                    <button
+                      key={i}
+                      onClick={() =>
+                        setCurrentIdx(i)
+                      }
+                      className={`h-8 sm:h-9 rounded-lg border-2 text-xs font-bold transition ${
+                        currentIdx === i
+                          ? "bg-blue-600 border-blue-600 text-white"
+                          : userAnswers[q.id]
+                          ? "bg-green-500 border-green-500 text-white"
+                          : "bg-gray-100 hover:bg-gray-200 border-gray-300"
+                      }`}
+                    >
 
-                  </button>
-                ))}
+                      {i + 1}
+
+                    </button>
+
+                  ))}
+
+                </div>
 
               </div>
 
@@ -466,7 +462,7 @@ function QuizPortal({
 
               <button
                 onClick={handleFinalSubmit}
-                className="mt-5 w-full bg-red-600 hover:bg-red-700 text-white py-4 rounded-xl font-black uppercase text-sm"
+                className="mt-4 w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-black uppercase text-xs sm:text-sm"
               >
 
                 Submit Final Test
