@@ -267,7 +267,7 @@ function App() {
 
       {/* HEADER */}
 
-      <header className="bg-white border-b border-slate-200 py-4 px-6 flex flex-col sm:flex-row justify-between items-center gap-4 sticky top-0 z-40 shadow-xs">
+      <header className="bg-white border-b border-slate-200 py-4 px-4 sm:px-6 flex flex-col md:flex-row justify-between items-center gap-4 sticky top-0 z-40 shadow-sm">
 
         <div className="flex items-center gap-3">
 
@@ -456,6 +456,7 @@ function App() {
 
             <AdminPanel
               users={users}
+              setUsers={setUsers}
               questions={questions}
               setQuestions={setQuestions}
               tests={tests}
