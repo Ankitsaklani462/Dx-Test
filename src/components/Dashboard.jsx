@@ -209,7 +209,7 @@ function Dashboard({
 
   return (
 
-    <div className="w-full max-w-[1700px] mx-auto px-2 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-5 sm:space-y-6 overflow-x-hidden">
+    <div className="w-full max-w-[1700px] mx-auto space-y-5 sm:space-y-6 overflow-x-hidden">
 
       {/* ================= HERO ================= */}
 
@@ -217,7 +217,7 @@ function Dashboard({
 
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_top_right,white,transparent_35%)]"></div>
 
-        <div className="relative z-10 flex flex-col xl:flex-row gap-6 lg:gap-10">
+        <div className="relative z-10 flex flex-col lg:flex-row gap-6 lg:gap-10">
 
           {/* LEFT */}
 
@@ -286,7 +286,7 @@ function Dashboard({
 
           {/* RIGHT */}
 
-          <div className="w-full xl:max-w-[380px] bg-white/10 backdrop-blur-xl border border-white/10 rounded-3xl p-5 sm:p-6 flex-shrink-0">
+          <div className="w-full lg:max-w-[380px] bg-white/10 backdrop-blur-xl border border-white/10 rounded-3xl p-5 sm:p-6 flex-shrink-0">
 
             <div className="flex items-center justify-between gap-4">
 
@@ -416,7 +416,7 @@ function Dashboard({
 
               </div>
 
-              <div className={`w-16 h-16 rounded-2xl ${item.bg} flex items-center justify-center`}>
+              <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl ${item.bg} flex flex-shrink-0 items-center justify-center`}>
 
                 {item.icon}
 
@@ -482,7 +482,7 @@ function Dashboard({
 
                     </div>
 
-                    <div className="flex items-center justify-between lg:justify-end gap-4">
+                    <div className="flex flex-wrap items-center justify-between lg:justify-end gap-4">
 
                       <span
                         className={`text-2xl sm:text-3xl font-black ${
@@ -584,7 +584,7 @@ function Dashboard({
 
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-4 sm:p-6 space-y-5">
 
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
           <input
             type="text"
@@ -665,7 +665,7 @@ function Dashboard({
 
       {/* ================= TESTS ================= */}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-5 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 sm:gap-6">
 
         {filteredTests.map((test) => (
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { db } from './firebase';
 import { collection, doc, getDoc, setDoc, getDocs } from 'firebase/firestore';
 
@@ -31,6 +31,8 @@ function App() {
   const [selectedSubject, setSelectedSubject] = useState('HTML');
 
   const [newSubjectName, setNewSubjectName] = useState('');
+  const isLoginScreen = currentScreen === 'login';
+  const isQuizScreen = currentScreen === 'quiz';
 
   // ================= FETCH DATA =================
 
@@ -263,24 +265,26 @@ function App() {
 
   return (
 
-    <div className="min-h-screen bg-[#f8fafc] text-slate-800 font-sans antialiased">
+    <div className="min-h-screen w-full overflow-x-hidden bg-[#f8fafc] text-slate-800 font-sans antialiased">
 
       {/* HEADER */}
 
-      <header className="bg-white border-b border-slate-200 py-4 px-4 sm:px-6 flex flex-col md:flex-row justify-between items-center gap-4 sticky top-0 z-40 shadow-sm">
+      {!isLoginScreen && (
 
-        <div className="flex items-center gap-3">
+      <header className={`bg-white border-b border-slate-200 py-3 sm:py-4 px-3 sm:px-6 flex flex-col md:flex-row md:justify-between md:items-center gap-3 shadow-sm ${isQuizScreen ? '' : 'sticky top-0 z-40'}`}>
+
+        <div className="flex min-w-0 items-center gap-3">
 
           <div className="bg-slate-900 text-white font-black px-2.5 py-1.5 rounded-lg text-sm tracking-tighter">
             TB
           </div>
 
-          <div>
-            <h1 className="text-sm font-black tracking-wider text-slate-900 uppercase">
+          <div className="min-w-0">
+            <h1 className="truncate text-sm font-black tracking-wider text-slate-900 uppercase">
               TOYOTA BOSHOKU
             </h1>
 
-            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+            <p className="truncate text-[9px] font-bold text-slate-400 uppercase tracking-widest">
               Device India Private Limited
             </p>
           </div>
@@ -289,17 +293,17 @@ function App() {
 
         {currentUser && (
 
-          <div className="flex items-center gap-2">
+          <div className="flex w-full flex-wrap items-center justify-center gap-2 md:w-auto md:justify-end">
 
-            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
+            <div className="flex max-w-full min-w-0 items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
 
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0"></span>
 
-              <span className="text-xs font-bold text-slate-700">
+              <span className="min-w-0 truncate text-xs font-bold text-slate-700">
                 {currentUser.name} ({currentUser.empId})
               </span>
 
-              <span className="text-[9px] font-black uppercase tracking-wider bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded">
+              <span className="flex-shrink-0 text-[9px] font-black uppercase tracking-wider bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded">
                 {currentUser.role === 'admin'
                   ? 'SYSTEM ADMIN'
                   : 'CANDIDATE'}
@@ -309,7 +313,7 @@ function App() {
 
             <button
               onClick={handleLogout}
-              className="bg-red-600 hover:bg-red-700 text-white font-black px-4 py-2 rounded-xl text-xs uppercase tracking-wider transition"
+              className="flex-shrink-0 bg-red-600 hover:bg-red-700 text-white font-black px-4 py-2 rounded-xl text-xs uppercase tracking-wider transition"
             >
               Logout
             </button>
@@ -319,9 +323,19 @@ function App() {
 
       </header>
 
+      )}
+
       {/* MAIN */}
 
-      <main className="py-8 px-4 max-w-7xl mx-auto">
+      <main
+        className={
+          isLoginScreen
+            ? "w-full"
+            : isQuizScreen
+            ? "w-full max-w-[1700px] mx-auto px-2 sm:px-4 lg:px-6 py-3 sm:py-4"
+            : "w-full max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-5 sm:py-8"
+        }
+      >
 
         {/* LOGIN */}
 
@@ -376,28 +390,28 @@ function App() {
 
         {currentScreen === 'admin' && (
 
-          <div className="space-y-8">
+          <div className="space-y-6 sm:space-y-8">
 
             {/* SUBJECT MANAGEMENT */}
 
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+            <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
 
-              <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <div className="flex flex-col gap-3 border-b border-slate-100 pb-3 sm:flex-row sm:items-center sm:justify-between">
 
-                <h2 className="text-sm font-black uppercase tracking-wider text-slate-900">
+                <h2 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-900 break-words">
                   Dynamic Categorization Framework Engine
                 </h2>
 
                 <button
                   onClick={() => setCurrentScreen('dashboard')}
-                  className="bg-slate-900 text-white text-xs font-bold px-4 py-2 rounded-xl uppercase tracking-wide"
+                  className="w-full sm:w-auto bg-slate-900 text-white text-xs font-bold px-4 py-2 rounded-xl uppercase tracking-wide"
                 >
                   Return Dashboard
                 </button>
 
               </div>
 
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col sm:flex-row gap-3 items-end max-w-xl text-xs">
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col sm:flex-row gap-3 items-end w-full max-w-xl text-xs">
 
                 <div className="flex-1 w-full">
 
@@ -419,7 +433,7 @@ function App() {
 
                 <button
                   onClick={handleAddSubject}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-black px-4 py-2.5 rounded-lg text-xs uppercase tracking-wider"
+                  className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-black px-4 py-2.5 rounded-lg text-xs uppercase tracking-wider"
                 >
                   Add Subject
                 </button>

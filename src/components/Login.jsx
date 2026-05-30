@@ -1,6 +1,6 @@
 // src/components/Login.jsx
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import myBgImage from '../assets/image.png';
 import logo from '../assets/ogp.png';
 
@@ -60,7 +60,7 @@ function Login({ onAuth }) {
   return (
 
     <div
-      className="fixed inset-0 w-full h-screen overflow-y-auto bg-cover bg-center"
+      className="min-h-screen w-full overflow-y-auto bg-cover bg-center"
       style={{
         backgroundImage: `linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url(${myBgImage})`
       }}
@@ -100,9 +100,9 @@ function Login({ onAuth }) {
 
       {/* ================= MAIN LOGIN AREA ================= */}
 
-      <div className="min-h-[calc(100vh-72px)] flex items-center justify-center lg:justify-end px-4 sm:px-6 md:px-10 lg:px-20 py-6">
+      <div className="min-h-[calc(100vh-72px)] flex items-center justify-center lg:justify-end px-3 sm:px-6 md:px-10 lg:px-20 py-6">
 
-        <div className="w-full max-w-md bg-white/95 backdrop-blur-md shadow-2xl rounded-2xl sm:rounded-3xl p-5 sm:p-8 border border-white/20">
+        <div className="w-full max-w-md bg-white/95 backdrop-blur-md shadow-2xl rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-white/20">
 
           {/* ================= CARD HEADER ================= */}
 

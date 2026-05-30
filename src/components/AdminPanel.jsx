@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { db } from "../firebase";
 
 import {
@@ -395,13 +395,13 @@ function AdminPanel({
 
   return (
 
-    <div className="space-y-5 sm:space-y-6">
+    <div className="w-full space-y-5 sm:space-y-6 overflow-x-hidden">
 
       {/* HEADER */}
 
       <div className="bg-slate-900 text-white p-4 sm:p-6 rounded-3xl flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
 
-        <h2 className="text-2xl sm:text-3xl font-black">
+        <h2 className="text-2xl sm:text-3xl font-black break-words">
 
           Admin Panel
 
@@ -411,7 +411,7 @@ function AdminPanel({
           onClick={() =>
             setCurrentScreen("dashboard")
           }
-          className="bg-blue-600 hover:bg-blue-700 px-4 sm:px-5 py-3 rounded-2xl font-black text-sm sm:text-base"
+          className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 px-4 sm:px-5 py-3 rounded-2xl font-black text-sm sm:text-base"
         >
 
           Dashboard
@@ -422,7 +422,7 @@ function AdminPanel({
 
       {/* TABS */}
 
-      <div className="bg-white rounded-2xl border p-2 flex flex-wrap gap-2">
+      <div className="bg-white rounded-2xl border p-2 grid grid-cols-1 sm:grid-cols-3 gap-2">
 
         {[
           "users",
@@ -435,7 +435,7 @@ function AdminPanel({
             onClick={() =>
               setActiveTab(tab)
             }
-            className={`px-4 sm:px-5 py-3 rounded-xl font-bold text-xs sm:text-sm transition ${
+            className={`w-full px-4 sm:px-5 py-3 rounded-xl font-bold text-xs sm:text-sm transition ${
               activeTab === tab
                 ? "bg-slate-900 text-white"
                 : "hover:bg-slate-100"
@@ -454,11 +454,11 @@ function AdminPanel({
 
       {activeTab === "users" && (
 
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 sm:gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(280px,380px)_minmax(0,1fr)] gap-5 sm:gap-6">
 
           {/* LEFT */}
 
-          <div className="bg-white rounded-3xl border p-4 sm:p-5">
+          <div className="bg-white rounded-3xl border p-4 sm:p-5 min-w-0">
 
             <input
               placeholder="Search User"
@@ -468,7 +468,7 @@ function AdminPanel({
               className="w-full border rounded-2xl px-4 py-3 text-sm sm:text-base"
             />
 
-            <div className="mt-5 space-y-3 max-h-[600px] overflow-y-auto">
+            <div className="mt-5 space-y-3 max-h-[420px] sm:max-h-[600px] overflow-y-auto">
 
               {filteredUsers.map((u) => (
 
@@ -530,7 +530,7 @@ function AdminPanel({
 
           {/* RIGHT */}
 
-          <div className="xl:col-span-2 bg-white rounded-3xl border p-4 sm:p-6">
+          <div className="bg-white rounded-3xl border p-4 sm:p-6 min-w-0">
 
             {!selectedUser ? (
 
@@ -552,7 +552,7 @@ function AdminPanel({
 
                 {/* STATS */}
 
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
 
                   {Object.entries(performance).map(
                     ([k, v]) => (
@@ -760,7 +760,7 @@ function AdminPanel({
 
             {/* GRID */}
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
               <div>
 
@@ -867,7 +867,7 @@ function AdminPanel({
                   type="file"
                   onChange={handleCSVUpload}
                   disabled={csvLoading}
-                  className="w-full text-sm"
+                  className="w-full text-xs sm:text-sm"
                 />
 
                 {csvLoading && (
@@ -952,7 +952,7 @@ function AdminPanel({
                   onClick={() =>
                     handleDeleteTest(t.id)
                   }
-                  className="bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-2xl font-black text-sm sm:text-base"
+                  className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-2xl font-black text-sm sm:text-base"
                 >
 
                   Delete
