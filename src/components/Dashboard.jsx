@@ -14,6 +14,8 @@ import {
 
 function Dashboard({
   currentUser,
+  setCurrentUser,
+  onEditProfile,
   tests = [],
   subjects = [],
   questions = [],
@@ -35,6 +37,94 @@ function Dashboard({
   const [expandedAttempt, setExpandedAttempt] = useState(null);
 
   // ================= ATTEMPTS =================
+
+  const loadJsPdf = async () => {
+    if (window.jspdf?.jsPDF) {
+      return window.jspdf.jsPDF;
+    }
+
+    try {
+      const jsPDFModule = await import('jspdf');
+      return jsPDFModule.jsPDF || jsPDFModule.default?.jsPDF || jsPDFModule.default || jsPDFModule;
+    } catch (error) {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/jspdf@4.2.1/dist/jspdf.umd.min.js';
+        script.onload = () => {
+          if (window.jspdf?.jsPDF) {
+            resolve(window.jspdf.jsPDF);
+          } else if (window.jspdf?.default?.jsPDF) {
+            resolve(window.jspdf.default.jsPDF);
+          } else {
+            reject(new Error('jspdf loaded but jsPDF not found'));
+          }
+        };
+        script.onerror = () => reject(new Error('Failed to load jspdf from CDN'));
+        document.body.appendChild(script);
+      });
+    }
+  };
+
+  const generateAttemptPdf = async (attempt) => {
+    try {
+      const jsPDF = await loadJsPdf();
+      const doc = new jsPDF();
+      const lines = [];
+      lines.push(`Test: ${attempt.testTitle || attempt.testId || 'Unknown'}`);
+      lines.push(`Score: ${attempt.percentage || attempt.score || 0}%`);
+      lines.push(`Date: ${attempt.date ? new Date(attempt.date).toLocaleString() : 'N/A'}`);
+      lines.push('');
+      (attempt.answers || []).forEach((a, i) => {
+        lines.push(`${i + 1}. ${a.questionText || a.question || 'Question'}`);
+        lines.push(`   Your Answer: ${a.selectedAnswer}`);
+        lines.push(`   Correct: ${a.correctAnswer || a.correct}`);
+        lines.push('');
+      });
+
+      let y = 20;
+      doc.setFontSize(12);
+      lines.forEach((line) => {
+        if (y > 280) { doc.addPage(); y = 20; }
+        doc.text(String(line), 14, y);
+        y += 8;
+      });
+      const safeTitle = (attempt.testTitle || 'attempt').replace(/[^a-z0-9\-]/gi, '_');
+      doc.save(`${safeTitle}_${Date.now()}.pdf`);
+    } catch (err) {
+      console.error('PDF generation failed', err);
+      alert('Could not generate PDF. Downloading CSV instead.');
+      downloadAttemptCsv(attempt);
+    }
+  };
+
+  const downloadAttemptCsv = (attempt) => {
+    const rows = [
+      ['Test', attempt.testTitle || attempt.testId || 'Unknown'],
+      ['Score', `${attempt.percentage || attempt.score || 0}%`],
+      ['Date', attempt.date ? new Date(attempt.date).toLocaleString() : 'N/A'],
+      [],
+      ['Question', 'Your Answer', 'Correct Answer'],
+    ];
+
+    (attempt.answers || []).forEach((a) => {
+      rows.push([
+        a.questionText || a.question || 'Question',
+        a.selectedAnswer || '',
+        a.correctAnswer || a.correct || '',
+      ]);
+    });
+
+    const csvContent = rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${(attempt.testTitle || 'attempt').replace(/[^a-z0-9\-]/gi, '_')}_${Date.now()}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   const attempts = useMemo(() => {
 
@@ -83,6 +173,25 @@ function Dashboard({
     });
 
   }, [currentUser?.attempts, questions]);
+
+  const sameLevelAttemptStats = useMemo(() => {
+    const stats = {
+      Beginner: { count: 0, hasPerfect: false },
+      Mid: { count: 0, hasPerfect: false },
+      Advanced: { count: 0, hasPerfect: false },
+    };
+
+    (currentUser?.attempts || []).forEach((attempt) => {
+      const level = attempt.level;
+      if (!level || !stats[level]) return;
+      stats[level].count += 1;
+      if (attempt.percentage === 100) {
+        stats[level].hasPerfect = true;
+      }
+    });
+
+    return stats;
+  }, [currentUser?.attempts]);
 
   // ================= PERFORMANCE =================
 
@@ -205,6 +314,13 @@ function Dashboard({
     );
   };
 
+  const avatarSrc =
+    currentUser?.profileImage ||
+    currentUser?.photoURL ||
+    `https://via.placeholder.com/160?text=${
+      currentUser?.name?.charAt(0)?.toUpperCase() || "U"
+    }`;
+
   // ================= UI =================
 
   return (
@@ -229,13 +345,34 @@ function Dashboard({
 
             </p>
 
-            <h1 className="text-2xl sm:text-3xl md:text-4xl xl:text-5xl font-black mt-4 leading-tight break-words">
+            <div className="flex flex-wrap items-center gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.22em] text-slate-400 font-black">
+                  Welcome,
+                </p>
+                <h1 className="text-2xl sm:text-3xl md:text-4xl xl:text-5xl font-black leading-tight break-words text-white">
+                  {currentUser?.name}
+                </h1>
+              </div>
+              <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-emerald-400 shadow-lg bg-slate-800">
+                <img
+                  src={avatarSrc}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </div>
 
-              Welcome,
-              <br />
-              {currentUser?.name}
-
-            </h1>
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={onEditProfile}
+                className="inline-flex items-center rounded-full bg-emerald-500 px-4 py-2 text-xs font-black uppercase tracking-[0.22em] text-slate-950 transition hover:bg-emerald-400"
+              >
+                Edit Profile
+              </button>
+              
+            </div>
 
             <p className="text-slate-300 mt-4 sm:mt-6 text-sm sm:text-base leading-7 max-w-2xl">
 
@@ -353,7 +490,6 @@ function Dashboard({
 
       </div>
 
-      {/* ================= STATS ================= */}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
 
@@ -476,7 +612,7 @@ function Dashboard({
                       <p className="text-xs sm:text-sm text-slate-500 break-words">
 
                         {attempt.subject} • {attempt.level} •{" "}
-                        {new Date(attempt.date).toLocaleDateString()}
+                        {attempt.date ? new Date(attempt.date).toLocaleString() : 'N/A'}
 
                       </p>
 
@@ -508,6 +644,19 @@ function Dashboard({
                           : <ChevronDown size={18} />
                         }
 
+                      </button>
+
+                      <button
+                        onClick={() => generateAttemptPdf(attempt)}
+                        className="bg-emerald-600 text-white p-3 rounded-xl"
+                      >
+                        Download PDF
+                      </button>
+                      <button
+                        onClick={() => downloadAttemptCsv(attempt)}
+                        className="bg-slate-800 text-white p-3 rounded-xl"
+                      >
+                        Download CSV
                       </button>
 
                     </div>
@@ -686,14 +835,39 @@ function Dashboard({
 
             </p>
 
-            <button
-              onClick={() => startTest(test)}
-              className="w-full mt-6 bg-red-600 hover:bg-red-700 text-white py-3 sm:py-4 rounded-2xl font-black uppercase tracking-wider text-sm sm:text-base transition"
-            >
+            {(() => {
+              const levelStats = sameLevelAttemptStats[test.level] || { count: 0, hasPerfect: false };
+              const canAttempt =
+                levelStats.count === 0 ||
+                (levelStats.hasPerfect && levelStats.count < 2);
+              const isRetryBlocked = levelStats.count > 0 && !levelStats.hasPerfect;
+              const buttonLabel = canAttempt
+                ? 'Start Assessment'
+                : isRetryBlocked
+                ? 'Need 100% to retake this level'
+                : 'Retry limit reached';
 
-              Start Assessment
-
-            </button>
+              return (
+                <>
+                  <button
+                    onClick={() => canAttempt && startTest(test)}
+                    disabled={!canAttempt}
+                    className={`w-full mt-6 py-3 sm:py-4 rounded-2xl font-black uppercase tracking-wider text-sm sm:text-base transition ${
+                      canAttempt
+                        ? 'bg-red-600 hover:bg-red-700 text-white'
+                        : 'bg-slate-300 text-slate-600 cursor-not-allowed'
+                    }`}
+                  >
+                    {buttonLabel}
+                  </button>
+                  {levelStats.count > 0 && (
+                    <p className="mt-3 text-xs text-slate-500">
+                      Attempts at this level: {levelStats.count}. {levelStats.hasPerfect ? 'One perfect score allows a second retake.' : 'Score 100% once to unlock another attempt.'}
+                    </p>
+                  )}
+                </>
+              );
+            })()}
 
           </div>
 

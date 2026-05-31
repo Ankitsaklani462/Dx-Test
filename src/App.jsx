@@ -6,6 +6,8 @@ import Login from './components/Login';
 import QuizPortal from './components/QuizPortal';
 import AdminPanel from './components/AdminPanel';
 import Dashboard from './components/Dashboard';
+import ProfilePage from './components/ProfilePage';
+import BrandLogo from './components/BrandLogo';
 
 function App() {
 
@@ -271,45 +273,41 @@ function App() {
 
       {!isLoginScreen && (
 
-      <header className={`bg-white border-b border-slate-200 py-3 sm:py-4 px-3 sm:px-6 flex flex-col md:flex-row md:justify-between md:items-center gap-3 shadow-sm ${isQuizScreen ? '' : 'sticky top-0 z-40'}`}>
+        <div className="bg-white border-b border-slate-200 py-3 sm:py-4 px-3 sm:px-6 flex flex-col md:flex-row md:justify-between md:items-center gap-3 shadow-sm sticky top-0 z-40">
 
-        <div className="flex min-w-0 items-center gap-3">
-
-          <div className="bg-slate-900 text-white font-black px-2.5 py-1.5 rounded-lg text-sm tracking-tighter">
-            TB
-          </div>
-
-          <div className="min-w-0">
-            <h1 className="truncate text-sm font-black tracking-wider text-slate-900 uppercase">
-              TOYOTA BOSHOKU
-            </h1>
-
-            <p className="truncate text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-              Device India Private Limited
-            </p>
-          </div>
-
-        </div>
+        <BrandLogo />
 
         {currentUser && (
 
           <div className="flex w-full flex-wrap items-center justify-center gap-2 md:w-auto md:justify-end">
 
-            <div className="flex max-w-full min-w-0 items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
-
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0"></span>
-
-              <span className="min-w-0 truncate text-xs font-bold text-slate-700">
-                {currentUser.name} ({currentUser.empId})
-              </span>
-
-              <span className="flex-shrink-0 text-[9px] font-black uppercase tracking-wider bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded">
-                {currentUser.role === 'admin'
-                  ? 'SYSTEM ADMIN'
-                  : 'CANDIDATE'}
-              </span>
-
-            </div>
+            <button
+              type="button"
+              onClick={() => setCurrentScreen('profile')}
+              className="flex max-w-full min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-left transition hover:border-emerald-300 hover:bg-slate-100"
+            >
+              <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-slate-900 text-white text-sm font-black">
+                {currentUser.profileImage || currentUser.photoURL ? (
+                  <img
+                    src={currentUser.profileImage || currentUser.photoURL}
+                    alt="User avatar"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span>{currentUser.name?.charAt(0)?.toUpperCase() || 'U'}</span>
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-xs font-bold text-slate-700">
+                  {currentUser.name} ({currentUser.empId})
+                </p>
+                <span className="truncate text-[9px] font-black uppercase tracking-wider bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded">
+                  {currentUser.role === 'admin'
+                    ? 'SYSTEM ADMIN'
+                    : 'CANDIDATE'}
+                </span>
+              </div>
+            </button>
 
             <button
               onClick={handleLogout}
@@ -321,7 +319,7 @@ function App() {
           </div>
         )}
 
-      </header>
+        </div>
 
       )}
 
@@ -349,6 +347,7 @@ function App() {
 
           <Dashboard
             currentUser={currentUser}
+            onEditProfile={() => setCurrentScreen('profile')}
             tests={tests}
             subjects={subjects}
 
@@ -364,6 +363,16 @@ function App() {
             setSelectedReviewAttempt={setSelectedReviewAttempt}
           />
 
+        )}
+
+        {/* PROFILE */}
+
+        {currentScreen === 'profile' && (
+          <ProfilePage
+            currentUser={currentUser}
+            setCurrentUser={setCurrentUser}
+            onBack={() => setCurrentScreen('dashboard')}
+          />
         )}
 
         {/* QUIZ */}
@@ -382,6 +391,7 @@ function App() {
             onForceSync={() =>
               syncCurrentUserState(currentUser?.empId)
             }
+            setCurrentUser={setCurrentUser}
           />
 
         )}

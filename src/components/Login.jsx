@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import myBgImage from '../assets/image.png';
 import logo from '../assets/ogp.png';
+import BrandLogo from './BrandLogo';
 
 function Login({ onAuth }) {
 
@@ -32,7 +33,7 @@ function Login({ onAuth }) {
 
     // ADMIN LOGIN
 
-    if (cleanId === 'ADMIN01' && password === 'admin123') {
+    if (cleanId === 'ADMIN01' && password === 'admin@123') {
 
       onAuth({
         type: 'login',
@@ -69,40 +70,14 @@ function Login({ onAuth }) {
       {/* ================= HEADER ================= */}
 
       <div className="bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-md w-full">
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-3">
-
-          <img
-            src={logo}
-            alt="Company Logo"
-            className="h-10 sm:h-12 w-auto object-contain flex-shrink-0"
-          />
-
-          <div className="min-w-0">
-
-            <h1 className="font-black text-slate-900 tracking-wide text-sm sm:text-lg md:text-xl break-words">
-
-              TOYOTA BOSHOKU
-
-            </h1>
-
-            <p className="text-[9px] sm:text-[10px] md:text-xs text-gray-500 font-bold tracking-widest uppercase break-words">
-
-              Device India Private Limited
-
-            </p>
-
-          </div>
-
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+          <BrandLogo />
         </div>
-
       </div>
 
-      {/* ================= MAIN LOGIN AREA ================= */}
+      <main className="min-h-[calc(100vh-72px)] flex items-center justify-center lg:justify-end px-3 sm:px-6 md:px-10 lg:px-20 py-6">
 
-      <div className="min-h-[calc(100vh-72px)] flex items-center justify-center lg:justify-end px-3 sm:px-6 md:px-10 lg:px-20 py-6">
-
-        <div className="w-full max-w-md bg-white/95 backdrop-blur-md shadow-2xl rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-white/20">
+        <div className="w-full max-w-md lg:ml-auto bg-white/95 backdrop-blur-md shadow-2xl rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-white/20">
 
           {/* ================= CARD HEADER ================= */}
 
@@ -212,7 +187,7 @@ function Login({ onAuth }) {
 
         </div>
 
-      </div>
+      </main>
 
     </div>
   );

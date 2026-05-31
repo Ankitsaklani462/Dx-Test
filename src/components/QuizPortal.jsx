@@ -3,14 +3,24 @@
 import { useState, useEffect } from "react";
 import { doc, updateDoc, arrayUnion } from "firebase/firestore";
 import { db } from "../firebase";
+import ChatBot from './ChatBot';
 
-function QuizPortal({ currentUser, activeTest, questions, setCurrentScreen }) {
+function QuizPortal({ currentUser, activeTest, questions, setCurrentScreen, setCurrentUser }) {
   const [showResult, setShowResult] = useState(null);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [userAnswers, setUserAnswers] = useState({});
   const [timeLeft, setTimeLeft] = useState((activeTest.duration || 30) * 60);
 
   const testQuestions = questions.filter((q) => activeTest.questionIds.includes(q.id));
+
+  const answeredQuestions = testQuestions.filter((q) => userAnswers[q.id] !== undefined);
+  const currentCorrect = answeredQuestions.reduce(
+    (count, q) => (userAnswers[q.id] === q.answer ? count + 1 : count),
+    0
+  );
+  const currentPercent = testQuestions.length
+    ? Math.round((currentCorrect / testQuestions.length) * 100)
+    : 0;
 
   const submitTest = async () => {
     try {
@@ -31,19 +41,39 @@ function QuizPortal({ currentUser, activeTest, questions, setCurrentScreen }) {
 
       const score = testQuestions.length > 0 ? Math.round((correct / testQuestions.length) * 100) : 0;
       
+      const newAttempt = {
+        testId: activeTest.id,
+        testTitle: activeTest.title,
+        percentage: score,
+        date: new Date().toISOString(),
+        answers: detailedResults,
+      };
+
       setShowResult({ correct, total: testQuestions.length, percentage: score, details: detailedResults });
 
       const userRef = doc(db, "users", currentUser.id);
       await updateDoc(userRef, {
-        attempts: arrayUnion({
-          testId: activeTest.id,
-          testTitle: activeTest.title,
-          percentage: score,
-          date: new Date().toISOString(),
-          answers: detailedResults,
-        }),
+        attempts: arrayUnion(newAttempt),
         "performance.overall": score,
       });
+
+      // Update local currentUser immediately so dashboard reflects the new attempt
+      if (typeof setCurrentUser === 'function') {
+        const updatedUser = {
+          ...currentUser,
+          attempts: [...(currentUser?.attempts || []), newAttempt],
+          performance: {
+            ...(currentUser?.performance || {}),
+            overall: score,
+          },
+        };
+        setCurrentUser(updatedUser);
+      }
+
+      // Navigate back to dashboard so user sees updated data immediately
+      if (typeof setCurrentScreen === 'function') {
+        setCurrentScreen('dashboard');
+      }
     } catch (error) {
       console.error("Error submitting test:", error);
     }
@@ -66,7 +96,7 @@ function QuizPortal({ currentUser, activeTest, questions, setCurrentScreen }) {
   return (
     <div className="w-full bg-gray-100 min-h-screen">
       {/* HEADER WITH DASHBOARD BUTTON */}
-      <header className="bg-[#1a2333] text-white p-4 flex justify-between items-center sticky top-0 z-10">
+      <header className="bg-[#1a2333] text-white p-4 flex justify-between items-center relative">
         <div className="font-bold">TOYOTA BOSHOKU | {currentUser.name}</div>
         <div className="flex gap-4 items-center">
           {!showResult && <div className="bg-red-600 px-3 py-1 rounded font-bold">Time: {Math.floor(timeLeft/60)}:{(timeLeft%60).toString().padStart(2,'0')}</div>}
@@ -116,7 +146,14 @@ function QuizPortal({ currentUser, activeTest, questions, setCurrentScreen }) {
               </div>
             </section>
 
-            <aside className="bg-white p-4 rounded-xl shadow h-fit">
+            <aside className="bg-white p-4 rounded-xl shadow h-fit space-y-4">
+              <div className="bg-slate-100 rounded-3xl p-4">
+                <p className="font-bold text-sm uppercase tracking-[0.2em] text-slate-500">Live Score</p>
+                <p className="text-4xl font-black mt-3">{currentPercent}%</p>
+                <p className="text-sm text-slate-600 mt-1">
+                  {answeredQuestions.length}/{testQuestions.length} answered • {currentCorrect} correct
+                </p>
+              </div>
               <h3 className="font-bold mb-3 uppercase text-sm text-gray-500">Question Tracker</h3>
               <div className="grid grid-cols-5 gap-2 max-h-[300px] overflow-y-auto pb-2">
                 {testQuestions.map((q, i) => (
@@ -127,6 +164,12 @@ function QuizPortal({ currentUser, activeTest, questions, setCurrentScreen }) {
                 ))}
               </div>
               <button onClick={submitTest} className="w-full mt-4 bg-red-700 text-white p-3 rounded font-black hover:bg-red-800">SUBMIT FINAL TEST</button>
+
+              {/* Chatbot tutor embedded in sidebar */}
+              <div className="mt-4">
+                <ChatBot testQuestions={testQuestions} currentIdx={currentIdx} />
+              </div>
+
             </aside>
           </div>
         )}
