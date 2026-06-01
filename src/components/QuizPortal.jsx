@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { doc, updateDoc, arrayUnion } from "firebase/firestore";
 import { db } from "../firebase";
-import ChatBot from './ChatBot';
+// ChatBot removed from quiz page per request
 
 function QuizPortal({ currentUser, activeTest, questions, setCurrentScreen, setCurrentUser }) {
   const [showResult, setShowResult] = useState(null);
@@ -27,14 +27,16 @@ function QuizPortal({ currentUser, activeTest, questions, setCurrentScreen, setC
       let correct = 0;
       const detailedResults = testQuestions.map((q) => {
         const selected = userAnswers[q.id];
-        const isCorrect = selected === q.answer;
+        const correctAns = q.correctAnswer || q.answer || q.correct || '';
+        const isCorrect = selected && correctAns ? selected === correctAns : !!q.isCorrect;
         if (selected && isCorrect) correct++;
-        
+
         return {
           questionId: q.id,
-          question: q.question,
-          selectedAnswer: selected || "Not Attempted",
-          correctAnswer: q.answer,
+          question: q.question || q.questionText || '',
+          questionText: q.question || q.questionText || '',
+          selectedAnswer: selected || 'Not Attempted',
+          correctAnswer: correctAns,
           isCorrect: selected ? isCorrect : false,
         };
       });
@@ -147,13 +149,6 @@ function QuizPortal({ currentUser, activeTest, questions, setCurrentScreen, setC
             </section>
 
             <aside className="bg-white p-4 rounded-xl shadow h-fit space-y-4">
-              <div className="bg-slate-100 rounded-3xl p-4">
-                <p className="font-bold text-sm uppercase tracking-[0.2em] text-slate-500">Live Score</p>
-                <p className="text-4xl font-black mt-3">{currentPercent}%</p>
-                <p className="text-sm text-slate-600 mt-1">
-                  {answeredQuestions.length}/{testQuestions.length} answered • {currentCorrect} correct
-                </p>
-              </div>
               <h3 className="font-bold mb-3 uppercase text-sm text-gray-500">Question Tracker</h3>
               <div className="grid grid-cols-5 gap-2 max-h-[300px] overflow-y-auto pb-2">
                 {testQuestions.map((q, i) => (
@@ -164,12 +159,6 @@ function QuizPortal({ currentUser, activeTest, questions, setCurrentScreen, setC
                 ))}
               </div>
               <button onClick={submitTest} className="w-full mt-4 bg-red-700 text-white p-3 rounded font-black hover:bg-red-800">SUBMIT FINAL TEST</button>
-
-              {/* Chatbot tutor embedded in sidebar */}
-              <div className="mt-4">
-                <ChatBot testQuestions={testQuestions} currentIdx={currentIdx} />
-              </div>
-
             </aside>
           </div>
         )}

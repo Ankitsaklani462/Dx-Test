@@ -14,6 +14,9 @@ function AdminPanel({ users = [], setUsers, questions = [], setQuestions, tests 
   const [editForm, setEditForm] = useState({ name: "", empId: "", department: "", password: "" });
   const [tForm, setTForm] = useState({ title: "", subject: "", level: "Beginner", duration: "" });
   const [uploadedQuestions, setUploadedQuestions] = useState([]);
+  const [expandedTestId, setExpandedTestId] = useState(null);
+  const [editingQuestionId, setEditingQuestionId] = useState(null);
+  const [qForm, setQForm] = useState({ question: "", options: [], correctAnswer: "" });
 
   const parseCSV = (csvText) => {
     const lines = csvText
@@ -136,6 +139,79 @@ function AdminPanel({ users = [], setUsers, questions = [], setQuestions, tests 
     } catch (err) {
       console.error(err);
       alert("Failed to delete test.");
+    }
+  };
+
+  const openManageTest = (testId) => {
+    setExpandedTestId(expandedTestId === testId ? null : testId);
+    setEditingQuestionId(null);
+  };
+
+  const handleEditQuestionOpen = (q) => {
+    setEditingQuestionId(q.id);
+    setQForm({ question: q.question || q.questionText || "", options: q.options || [], correctAnswer: q.correctAnswer || q.answer || "" });
+  };
+
+  const handleSaveQuestion = async (testId) => {
+    if (!editingQuestionId) return;
+    try {
+      const qRef = doc(db, "questions", editingQuestionId);
+      const updated = { question: qForm.question, options: qForm.options.filter(Boolean), correctAnswer: qForm.correctAnswer, answer: qForm.correctAnswer };
+      await updateDoc(qRef, updated);
+      setQuestions((prev) => prev.map((p) => (p.id === editingQuestionId ? { ...p, ...updated } : p)));
+      setEditingQuestionId(null);
+      alert("Question updated successfully.");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to update question.");
+    }
+  };
+
+  const handleDeleteQuestion = async (e, testId, questionId) => {
+    e.stopPropagation();
+    if (!window.confirm("Delete this question?")) return;
+    try {
+      // remove question doc
+      await deleteDoc(doc(db, "questions", questionId));
+      // update local questions state
+      setQuestions((prev) => prev.filter((q) => q.id !== questionId));
+      // remove from test's questionIds both locally and in firestore
+      const testRef = doc(db, "tests", testId);
+      const testObj = tests.find((t) => t.id === testId);
+      if (testObj) {
+        const newIds = (testObj.questionIds || []).filter((id) => id !== questionId);
+        await updateDoc(testRef, { questionIds: newIds });
+        setTests((prev) => prev.map((t) => (t.id === testId ? { ...t, questionIds: newIds } : t)));
+      }
+      alert("Question deleted.");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to delete question.");
+    }
+  };
+
+  const handleAddQuestion = async (testId) => {
+    try {
+      const newQ = { question: "New question", options: ["Option 1", "Option 2"], correctAnswer: "Option 1", answer: "Option 1", createdAt: serverTimestamp() };
+      const qRef = await addDoc(collection(db, "questions"), newQ);
+      const newId = qRef.id;
+      setQuestions((prev) => [...prev, { id: newId, ...newQ }]);
+
+      const testRef = doc(db, "tests", testId);
+      const testObj = tests.find((t) => t.id === testId);
+      if (testObj) {
+        const newIds = [...(testObj.questionIds || []), newId];
+        await updateDoc(testRef, { questionIds: newIds });
+        setTests((prev) => prev.map((t) => (t.id === testId ? { ...t, questionIds: newIds } : t)));
+      }
+
+      // Open edit for the new question
+      openManageTest(testId);
+      setEditingQuestionId(newId);
+      setQForm({ question: newQ.question, options: newQ.options, correctAnswer: newQ.correctAnswer });
+    } catch (err) {
+      console.error(err);
+      alert("Failed to add question.");
     }
   };
 
@@ -416,12 +492,70 @@ function AdminPanel({ users = [], setUsers, questions = [], setQuestions, tests 
           <h2 className="text-2xl sm:text-3xl font-black mb-8">Live Tests</h2>
           <div className="space-y-4">
             {tests.map((t) => (
-              <div key={t.id} className="border rounded-3xl p-4 sm:p-6 flex flex-col sm:flex-row justify-between gap-4 sm:items-center">
-                <div className="min-w-0">
-                  <h3 className="text-xl sm:text-2xl font-black break-words">{t.title}</h3>
-                  <p className="text-sm sm:text-base break-words">{t.subject} | {t.level}</p>
+              <div key={t.id} className="border rounded-3xl p-4 sm:p-6 flex flex-col gap-4">
+                <div className="flex flex-col sm:flex-row justify-between gap-4 sm:items-center">
+                  <div className="min-w-0">
+                    <h3 className="text-xl sm:text-2xl font-black break-words">{t.title}</h3>
+                    <p className="text-sm sm:text-base break-words">{t.subject} | {t.level}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => openManageTest(t.id)} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-2xl font-black text-sm">{expandedTestId === t.id ? 'Close' : 'Manage'}</button>
+                    <button onClick={() => handleDeleteTest(t.id)} className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-2xl font-black text-sm sm:text-base">Delete</button>
+                  </div>
                 </div>
-                <button onClick={() => handleDeleteTest(t.id)} className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-2xl font-black text-sm sm:text-base">Delete</button>
+
+                {expandedTestId === t.id && (
+                  <div className="mt-4 space-y-3">
+                    <div className="flex justify-end">
+                      <button onClick={() => handleAddQuestion(t.id)} className="bg-green-600 text-white px-3 py-1 rounded-2xl font-black text-sm">+ Add Question</button>
+                    </div>
+                    {(questions.filter((q) => (t.questionIds || []).includes(q.id)) || []).map((q) => (
+                      <div key={q.id} className="border rounded-2xl p-3 bg-slate-50">
+                        {editingQuestionId === q.id ? (
+                          <div className="space-y-2">
+                            <input value={qForm.question} onChange={(e) => setQForm({ ...qForm, question: e.target.value })} className="w-full border p-2 rounded-lg" />
+                            <div className="space-y-1">
+                              {(qForm.options || []).map((opt, idx) => (
+                                <div key={idx} className="flex gap-2 items-center">
+                                  <input value={opt} onChange={(e) => setQForm({ ...qForm, options: qForm.options.map((o, i) => (i === idx ? e.target.value : o)) })} className="flex-1 border p-2 rounded-lg" />
+                                  <button onClick={() => setQForm({ ...qForm, options: qForm.options.filter((_, i) => i !== idx) })} className="text-red-500 px-2">Delete</button>
+                                </div>
+                              ))}
+                              <button onClick={() => setQForm({ ...qForm, options: [...(qForm.options || []), ""] })} className="text-sm text-blue-600">+ Add Option</button>
+                            </div>
+                            <div>
+                              <label className="text-xs">Correct Answer</label>
+                              <input value={qForm.correctAnswer} onChange={(e) => setQForm({ ...qForm, correctAnswer: e.target.value })} className="w-full border p-2 rounded-lg" />
+                            </div>
+                            <div className="flex gap-2">
+                              <button onClick={() => handleSaveQuestion(t.id)} className="bg-green-600 text-white px-4 py-2 rounded-lg">Save</button>
+                              <button onClick={() => setEditingQuestionId(null)} className="bg-slate-200 px-4 py-2 rounded-lg">Cancel</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex justify-between items-start gap-2">
+                            <div>
+                              <p className="font-bold">{q.question}</p>
+                              <div className="mt-2 space-y-1">
+                                {(q.options || []).map((opt, i) => (
+                                  <div key={i} className="text-sm">{String.fromCharCode(65 + i)}. {opt}</div>
+                                ))}
+                              </div>
+                              <p className="text-sm mt-2 text-green-700">Answer: {q.correctAnswer || q.answer}</p>
+                            </div>
+                            <div className="flex flex-col gap-2">
+                              <button onClick={() => handleEditQuestionOpen(q)} className="bg-yellow-500 text-white px-3 py-1 rounded-lg">Edit</button>
+                              <button onClick={(e) => handleDeleteQuestion(e, t.id, q.id)} className="bg-red-600 text-white px-3 py-1 rounded-lg">Delete</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {((questions.filter((q) => (t.questionIds || []).includes(q.id)) || []).length === 0) && (
+                      <p className="text-sm text-slate-500">No questions in this test.</p>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>

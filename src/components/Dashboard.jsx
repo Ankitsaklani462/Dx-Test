@@ -92,38 +92,8 @@ function Dashboard({
       doc.save(`${safeTitle}_${Date.now()}.pdf`);
     } catch (err) {
       console.error('PDF generation failed', err);
-      alert('Could not generate PDF. Downloading CSV instead.');
-      downloadAttemptCsv(attempt);
+      alert('Could not generate PDF.');
     }
-  };
-
-  const downloadAttemptCsv = (attempt) => {
-    const rows = [
-      ['Test', attempt.testTitle || attempt.testId || 'Unknown'],
-      ['Score', `${attempt.percentage || attempt.score || 0}%`],
-      ['Date', attempt.date ? new Date(attempt.date).toLocaleString() : 'N/A'],
-      [],
-      ['Question', 'Your Answer', 'Correct Answer'],
-    ];
-
-    (attempt.answers || []).forEach((a) => {
-      rows.push([
-        a.questionText || a.question || 'Question',
-        a.selectedAnswer || '',
-        a.correctAnswer || a.correct || '',
-      ]);
-    });
-
-    const csvContent = rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\r\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${(attempt.testTitle || 'attempt').replace(/[^a-z0-9\-]/gi, '_')}_${Date.now()}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
   };
 
   const attempts = useMemo(() => {
@@ -176,18 +146,20 @@ function Dashboard({
 
   const sameLevelAttemptStats = useMemo(() => {
     const stats = {
-      Beginner: { count: 0, hasPerfect: false },
-      Mid: { count: 0, hasPerfect: false },
-      Advanced: { count: 0, hasPerfect: false },
+      Beginner: { count: 0, hasPerfect: false, maxPercent: 0 },
+      Mid: { count: 0, hasPerfect: false, maxPercent: 0 },
+      Advanced: { count: 0, hasPerfect: false, maxPercent: 0 },
     };
 
     (currentUser?.attempts || []).forEach((attempt) => {
       const level = attempt.level;
       if (!level || !stats[level]) return;
+      const pct = attempt.percentage || 0;
       stats[level].count += 1;
-      if (attempt.percentage === 100) {
+      if (pct === 100) {
         stats[level].hasPerfect = true;
       }
+      if (pct > stats[level].maxPercent) stats[level].maxPercent = pct;
     });
 
     return stats;
@@ -652,12 +624,7 @@ function Dashboard({
                       >
                         Download PDF
                       </button>
-                      <button
-                        onClick={() => downloadAttemptCsv(attempt)}
-                        className="bg-slate-800 text-white p-3 rounded-xl"
-                      >
-                        Download CSV
-                      </button>
+                      
 
                     </div>
 
@@ -836,16 +803,13 @@ function Dashboard({
             </p>
 
             {(() => {
-              const levelStats = sameLevelAttemptStats[test.level] || { count: 0, hasPerfect: false };
-              const canAttempt =
-                levelStats.count === 0 ||
-                (levelStats.hasPerfect && levelStats.count < 2);
-              const isRetryBlocked = levelStats.count > 0 && !levelStats.hasPerfect;
+              const levelStats = sameLevelAttemptStats[test.level] || { count: 0, hasPerfect: false, maxPercent: 0 };
+              // Allow attempts until the user achieves a perfect (100%) score for this level.
+              const canAttempt = !levelStats.hasPerfect;
+              const bestPct = levelStats.maxPercent || 0;
               const buttonLabel = canAttempt
-                ? 'Start Assessment'
-                : isRetryBlocked
-                ? 'Need 100% to retake this level'
-                : 'Retry limit reached';
+                ? `Start Assessment (${bestPct}%)`
+                : `Completed (${bestPct}%)`;
 
               return (
                 <>
