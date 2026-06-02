@@ -26,7 +26,13 @@ function AdminPanel({ users = [], setUsers, questions = [], setQuestions, tests 
 
     if (lines.length < 2) return [];
 
-    const headers = lines[0].split(",").map((header) => header.trim().toLowerCase());
+    const normalizeHeader = (header) =>
+      header
+        .toLowerCase()
+        .replace(/\s+/g, "")
+        .replace(/[^a-z0-9]/g, "");
+
+    const headers = lines[0].split(",").map((header) => normalizeHeader(header.trim()));
 
     return lines.slice(1).map((line) => {
       const values = line.split(",").map((item) => item.trim());
@@ -61,12 +67,13 @@ function AdminPanel({ users = [], setUsers, questions = [], setQuestions, tests 
           subject: tForm.subject,
           level: tForm.level,
           options: [
-            row.optiona || row.optionA || "",
-            row.optionb || row.optionB || "",
-            row.optionc || row.optionC || "",
-            row.optiond || row.optionD || ""
+            row.optiona || row.option1 || row.optionone || "",
+            row.optionb || row.option2 || row.optiontwo || "",
+            row.optionc || row.option3 || row.optionthree || "",
+            row.optiond || row.option4 || row.optionfour || ""
           ].filter(Boolean),
-          correctAnswer: row.correctanswer || row.correctAnswer || row.answer || ""
+          correctAnswer: row.correctanswer || row.correctAnswer || row.answer || "",
+          answer: row.correctanswer || row.correctAnswer || row.answer || ""
         }));
 
       if (!formatted.length) {

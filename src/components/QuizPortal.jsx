@@ -11,7 +11,8 @@ function QuizPortal({ currentUser, activeTest, questions, setCurrentScreen, setC
   const [userAnswers, setUserAnswers] = useState({});
   const [timeLeft, setTimeLeft] = useState((activeTest.duration || 30) * 60);
 
-  const testQuestions = questions.filter((q) => activeTest.questionIds.includes(q.id));
+  const testQuestionIds = Array.isArray(activeTest?.questionIds) ? activeTest.questionIds : [];
+  const testQuestions = questions.filter((q) => testQuestionIds.includes(q.id || q._id));
 
   const answeredQuestions = testQuestions.filter((q) => userAnswers[q.id] !== undefined);
   const currentCorrect = answeredQuestions.reduce(
@@ -94,6 +95,26 @@ function QuizPortal({ currentUser, activeTest, questions, setCurrentScreen, setC
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  if (testQuestions.length === 0) {
+    return (
+      <div className="w-full min-h-screen bg-gray-100 flex items-center justify-center p-6">
+        <div className="bg-white p-8 rounded-3xl shadow-lg text-center max-w-xl">
+          <h2 className="text-2xl font-black mb-4">Test not ready</h2>
+          <p className="text-slate-600 mb-4">
+            This assessment has no questions available yet.
+            Please contact your test administrator or try another test.
+          </p>
+          <button
+            onClick={() => setCurrentScreen("dashboard")}
+            className="bg-slate-900 text-white px-6 py-3 rounded-2xl font-black hover:bg-slate-700"
+          >
+            Back to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full bg-gray-100 min-h-screen">
